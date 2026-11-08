@@ -1,0 +1,214 @@
+
+name: Build Shining Dragon APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Create Android Project
+        run: |
+          mkdir -p app/src/main/java/com/shiningdragon/app
+          mkdir -p app/src/main/assets
+
+          cat > settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "ShiningDragon"
+          include ':app'
+          EOF
+
+          cat > build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.7.3' apply false
+          }
+          EOF
+
+          cat > app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.shiningdragon.app'
+              compileSdk 35
+
+              defaultConfig {
+                  applicationId 'com.shiningdragon.app'
+                  minSdk 23
+                  targetSdk 35
+                  versionCode 1
+                  versionName '1.0'
+              }
+          }
+          EOF
+
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar"
+                  android:label="Shining Dragon"
+                  android:usesCleartextTraffic="false"
+                  android:hardwareAccelerated="true">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > app/src/main/java/com/shiningdragon/app/MainActivity.java <<'EOF'
+          package com.shiningdragon.app;
+
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          public class MainActivity extends Activity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  WebView webView = new WebView(this);
+                  webView.setWebViewClient(new WebViewClient());
+                  webView.getSettings().setJavaScriptEnabled(true);
+                  webView.loadUrl("file:///android_asset/index.html");
+                  setContentView(webView);
+              }
+          }
+          EOF
+
+          cat > app/src/main/assets/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="fa" dir="rtl">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <meta name="theme-color" content="#11100e">
+            <title>اژدهای درخشان</title>
+            <style>
+              * { box-sizing:border-box; }
+              body {
+                margin:0; background:#11100e; color:#f4ead5;
+                font-family:Tahoma, sans-serif;
+              }
+              header {
+                padding:30px 20px; text-align:center;
+                background:linear-gradient(145deg,#241b0c,#11100e);
+                border-bottom:1px solid #725522;
+              }
+              .dragon { font-size:65px; }
+              h1 { color:#d9ae53; margin:10px 0; }
+              header p { color:#c4b89f; }
+              main { padding:20px; max-width:600px; margin:auto; }
+              .welcome { color:#d9ae53; font-size:20px; }
+              .card {
+                background:#1c1a16; border:1px solid #554323;
+                border-radius:15px; padding:19px; margin:14px 0;
+              }
+              .card h3 { color:#d9ae53; margin-top:0; }
+              .menu {
+                display:grid; grid-template-columns:1fr 1fr; gap:12px;
+              }
+              button {
+                background:#29231a; color:#e7c16e;
+                border:1px solid #80612b; border-radius:12px;
+                padding:18px 8px; font-size:15px;
+                font-family:inherit;
+              }
+              button:active { background:#493719; }
+              #info { line-height:2; color:#ded3c0; }
+              footer { text-align:center; color:#91846f; padding:25px; }
+            </style>
+          </head>
+          <body>
+            <header>
+              <div class="dragon">🐉</div>
+              <h1>SHINING DRAGON</h1>
+              <p>باشگاه هنرهای رزمی اژدهای درخشان</p>
+            </header>
+            <main>
+              <div class="welcome">به خانواده اژدهای درخشان خوش آمدید</div>
+              <div class="card">
+                <h3>هنرهای رزمی ما</h3>
+                <p>🥋 ووشو</p>
+                <p>🐉 وینگ چون</p>
+                <p>☯️ تای چی</p>
+              </div>
+              <h3>بخش‌های باشگاه</h3>
+              <div class="menu">
+                <button onclick="show('برنامه کلاس‌ها')">📅 برنامه کلاس‌ها</button>
+                <button onclick="show('حضور و غیاب')">📋 حضور و غیاب</button>
+                <button onclick="show('پروفایل هنرجو')">👤 پروفایل هنرجو</button>
+                <button onclick="show('اطلاعیه‌های باشگاه')">📢 اطلاعیه‌ها</button>
+                <button onclick="show('شهریه')">💳 شهریه</button>
+                <button onclick="show('درجات رزمی')">🏆 درجات رزمی</button>
+              </div>
+              <div class="card">
+                <h3 id="title">باشگاه اژدهای درخشان</h3>
+                <div id="info">قدرت، نظم، آرامش و احترام</div>
+              </div>
+            </main>
+            <footer>SHINING DRAGON © 2026</footer>
+            <script>
+              function show(name) {
+                document.getElementById('title').innerText = name;
+                document.getElementById('info').innerText =
+                  'این بخش در نسخه‌های بعدی تکمیل خواهد شد.';
+              }
+            </script>
+          </body>
+          </html>
+          EOF
+
+      - name: Build APK
+        run: gradle assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Shining-Dragon-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          
